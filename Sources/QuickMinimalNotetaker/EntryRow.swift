@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct EntryRow: View {
     @ObservedObject var store: NotesStore
@@ -67,7 +68,7 @@ struct EntryRow: View {
     private var dragHandle: some View {
         GeometryReader { geo in
             if allowReorder {
-                Color.appYellow
+                entryBackground
                     .contentShape(Rectangle())
                     .gesture(
                         DragGesture(minimumDistance: 4, coordinateSpace: .named("entryList"))
@@ -76,10 +77,30 @@ struct EntryRow: View {
                     )
                     .preference(key: RowFramePreferenceKey.self, value: [entryID: geo.frame(in: .named("entryList"))])
             } else {
-                Color.appYellow
+                entryBackground
                     .preference(key: RowFramePreferenceKey.self, value: [entryID: geo.frame(in: .named("entryList"))])
             }
         }
+    }
+
+    private var entryBackground: some View {
+        ZStack {
+            Color.appYellow
+            if let entryImage {
+                entryImage
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .opacity(0.15)
+                    .clipped()
+            }
+        }
+    }
+
+    private var entryImage: Image? {
+        guard let url = Bundle.module.url(forResource: "entry_background", withExtension: "png"),
+              let nsImage = NSImage(contentsOf: url)
+        else { return nil }
+        return Image(nsImage: nsImage)
     }
 
     private func advanceFromText() {
