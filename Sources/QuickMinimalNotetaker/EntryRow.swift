@@ -7,10 +7,10 @@ struct EntryRow: View {
     var allowReorder: Bool = true
 
     var body: some View {
-        if let index = store.entries.firstIndex(where: { $0.id == entryID }) {
+        if store.entries.contains(where: { $0.id == entryID }) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 0) {
-                    TextField("", text: pageBinding(index))
+                    TextField("", text: pageBinding)
                         .textFieldStyle(.plain)
                         .font(.system(size: 12, design: .monospaced))
                         .multilineTextAlignment(.center)
@@ -38,7 +38,7 @@ struct EntryRow: View {
                 .frame(height: 28)
                 .overlay(Rectangle().frame(height: 1).foregroundColor(.ink), alignment: .bottom)
 
-                BulletTextView(text: textBinding(index), onReturnAdvance: advanceFromText)
+                BulletTextView(text: textBinding, onReturnAdvance: advanceFromText)
                     .focused(focusedField, equals: .text(entryID))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
@@ -84,21 +84,25 @@ struct EntryRow: View {
         }
     }
 
-    private func pageBinding(_ index: Int) -> Binding<String> {
+    // Looked up by id on every access (not a captured array index) so a binding held by
+    // an outgoing view during removal can't read or write past the end of the array.
+    private var pageBinding: Binding<String> {
         Binding(
-            get: { store.entries[index].page },
+            get: { store.entries.first(where: { $0.id == entryID })?.page ?? "" },
             set: { newValue in
-                store.entries[index].page = newValue
+                guard let idx = store.entries.firstIndex(where: { $0.id == entryID }) else { return }
+                store.entries[idx].page = newValue
                 store.save()
             }
         )
     }
 
-    private func textBinding(_ index: Int) -> Binding<String> {
+    private var textBinding: Binding<String> {
         Binding(
-            get: { store.entries[index].text },
+            get: { store.entries.first(where: { $0.id == entryID })?.text ?? "" },
             set: { newValue in
-                store.entries[index].text = newValue
+                guard let idx = store.entries.firstIndex(where: { $0.id == entryID }) else { return }
+                store.entries[idx].text = newValue
                 store.save()
             }
         )
