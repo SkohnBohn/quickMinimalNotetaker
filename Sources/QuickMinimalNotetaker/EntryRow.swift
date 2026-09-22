@@ -4,6 +4,7 @@ struct EntryRow: View {
     @ObservedObject var store: NotesStore
     let entryID: UUID
     var focusedField: FocusState<FocusField?>.Binding
+    var allowReorder: Bool = true
 
     var body: some View {
         if let index = store.entries.firstIndex(where: { $0.id == entryID }) {
@@ -43,14 +44,11 @@ struct EntryRow: View {
                     .padding(.vertical, 8)
                     .frame(minHeight: 34)
             }
-            .background(Color.appYellow)
+            .background(dragHandle)
             .overlay(Rectangle().stroke(Color.ink, lineWidth: 1))
             .padding(.bottom, 10)
-            .onDrag {
-                NSItemProvider(object: entryID.uuidString as NSString)
-            }
             .onDrop(of: [.text], isTargeted: nil) { providers in
-                guard let provider = providers.first else { return false }
+                guard allowReorder, let provider = providers.first else { return false }
                 _ = provider.loadObject(ofClass: NSString.self) { reading, _ in
                     guard let string = reading as? String, let sourceID = UUID(uuidString: string) else { return }
                     DispatchQueue.main.async {
@@ -59,6 +57,20 @@ struct EntryRow: View {
                 }
                 return true
             }
+        }
+    }
+
+    /// The card's own background, doubling as the drag-to-reorder handle. Attaching
+    /// onDrag here (instead of on the whole card) keeps it from swallowing clicks meant
+    /// for the page field, the delete button, or the text view.
+    @ViewBuilder
+    private var dragHandle: some View {
+        if allowReorder {
+            Color.appYellow.onDrag {
+                NSItemProvider(object: entryID.uuidString as NSString)
+            }
+        } else {
+            Color.appYellow
         }
     }
 

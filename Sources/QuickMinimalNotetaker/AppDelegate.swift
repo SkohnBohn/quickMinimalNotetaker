@@ -16,7 +16,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
-        window.isMovableByWindowBackground = true
+        // Off: it fights with in-content drag-to-reorder. The window still drags
+        // by its title bar strip (the top ~28pt), which is unaffected by this.
+        window.isMovableByWindowBackground = false
         window.minSize = NSSize(width: 300, height: 400)
         window.contentViewController = hostingController
         window.center()
