@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Notes</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <header id="header">
+      <span id="title">NOTES</span>
+      <button id="add-btn" title="Add entry">+</button>
+    </header>
+
+    <main id="list"></main>
+  </div>
+
+  <template id="entry-template">
+    <div class="entry" draggable="true">
+      <div class="entry-row">
+        <input class="page-input" type="text" inputmode="numeric" placeholder="" />
+        <button class="remove-btn" title="Remove">&times;</button>
+      </div>
+      <textarea class="text-input" placeholder="" rows="1"></textarea>
+    </div>
+  </template>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

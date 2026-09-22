@@ -1,0 +1,14 @@
+{
+  "name": "quick-minimal-notetaker",
+  "version": "1.0.0",
+  "description": "A super minimal chat-like note taker with page references.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "electron": "^31.0.0"
+  }
+}
