@@ -7,7 +7,8 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "QuickMinimalNotetaker",
-            path: "Sources/QuickMinimalNotetaker"
+            path: "Sources/QuickMinimalNotetaker",
+            resources: [.copy("Resources/background.jpg")]
         )
     ]
 )

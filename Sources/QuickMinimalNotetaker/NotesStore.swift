@@ -37,14 +37,22 @@ final class NotesStore: ObservableObject {
         save()
     }
 
-    func move(sourceID: UUID, targetID: UUID) {
-        guard sourceID != targetID,
-              let fromIndex = entries.firstIndex(where: { $0.id == sourceID }),
-              let toIndex = entries.firstIndex(where: { $0.id == targetID })
-        else { return }
-        let moved = entries.remove(at: fromIndex)
-        let insertIndex = entries.firstIndex(where: { $0.id == targetID }) ?? toIndex
-        entries.insert(moved, at: insertIndex)
+    func move(fromOffsets source: IndexSet, toOffset destination: Int) {
+        entries.move(fromOffsets: source, toOffset: destination)
         save()
+    }
+}
+
+private extension Array {
+    /// Same contract as the standard List `onMove` helper: moves the elements at
+    /// `source` so the first of them ends up at `destination`, shifting the rest
+    /// of the array accordingly.
+    mutating func move(fromOffsets source: IndexSet, toOffset destination: Int) {
+        let itemsToMove = source.map { self[$0] }
+        for index in source.sorted(by: >) {
+            remove(at: index)
+        }
+        let adjustedDestination = destination - source.filter { $0 < destination }.count
+        insert(contentsOf: itemsToMove, at: Swift.max(0, Swift.min(adjustedDestination, count)))
     }
 }

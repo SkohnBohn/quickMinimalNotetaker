@@ -5,6 +5,10 @@ struct EntryRow: View {
     let entryID: UUID
     var focusedField: FocusState<FocusField?>.Binding
     var allowReorder: Bool = true
+    var isDragging: Bool = false
+    var dragOffsetY: CGFloat = 0
+    var onDragChanged: (DragGesture.Value) -> Void = { _ in }
+    var onDragEnded: (DragGesture.Value) -> Void = { _ in }
 
     var body: some View {
         if store.entries.contains(where: { $0.id == entryID }) {
@@ -29,6 +33,7 @@ struct EntryRow: View {
                         Text("×")
                             .font(.system(size: 14))
                             .frame(width: 28, height: 28)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .foregroundColor(.ink.opacity(0.45))
@@ -47,30 +52,33 @@ struct EntryRow: View {
             .background(dragHandle)
             .overlay(Rectangle().stroke(Color.ink, lineWidth: 1))
             .padding(.bottom, 10)
-            .onDrop(of: [.text], isTargeted: nil) { providers in
-                guard allowReorder, let provider = providers.first else { return false }
-                _ = provider.loadObject(ofClass: NSString.self) { reading, _ in
-                    guard let string = reading as? String, let sourceID = UUID(uuidString: string) else { return }
-                    DispatchQueue.main.async {
-                        store.move(sourceID: sourceID, targetID: entryID)
-                    }
-                }
-                return true
-            }
+            .offset(y: isDragging ? dragOffsetY : 0)
+            .opacity(isDragging ? 0.85 : 1)
+            .zIndex(isDragging ? 1 : 0)
+            .animation(isDragging ? nil : .easeOut(duration: 0.15), value: dragOffsetY)
         }
     }
 
-    /// The card's own background, doubling as the drag-to-reorder handle. Attaching
-    /// onDrag here (instead of on the whole card) keeps it from swallowing clicks meant
-    /// for the page field, the delete button, or the text view.
+    /// The card's own background, doubling as the drag-to-reorder handle and reporting
+    /// this row's on-screen frame so a drag elsewhere can tell it's crossed this row.
+    /// A plain DragGesture (not onDrag/NSItemProvider) is used because pasteboard-based
+    /// drag sessions are unreliable for same-window reordering on macOS.
     @ViewBuilder
     private var dragHandle: some View {
-        if allowReorder {
-            Color.appYellow.onDrag {
-                NSItemProvider(object: entryID.uuidString as NSString)
+        GeometryReader { geo in
+            if allowReorder {
+                Color.appYellow
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 4, coordinateSpace: .named("entryList"))
+                            .onChanged(onDragChanged)
+                            .onEnded(onDragEnded)
+                    )
+                    .preference(key: RowFramePreferenceKey.self, value: [entryID: geo.frame(in: .named("entryList"))])
+            } else {
+                Color.appYellow
+                    .preference(key: RowFramePreferenceKey.self, value: [entryID: geo.frame(in: .named("entryList"))])
             }
-        } else {
-            Color.appYellow
         }
     }
 
