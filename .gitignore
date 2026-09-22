@@ -1,1 +1,4 @@
-node_modules/
+.build/
+.swiftpm/
+*.xcodeproj
+.DS_Store

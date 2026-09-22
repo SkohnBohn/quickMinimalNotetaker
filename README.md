@@ -4,16 +4,26 @@ A tiny, distraction-free notetaking app for reading — a scrollable, chat-like
 list of entries, each just a page number and free text (with lightweight
 bullet formatting). Drag entries to reorder. Nothing else.
 
+Native macOS app (Swift + SwiftUI/AppKit) — no Electron, no bundled
+Chromium/Node runtime, no third-party framework to notarize. It's built
+locally with your own Xcode/Swift toolchain.
+
+## Requirements
+
+- macOS 13 or later
+- Xcode (or the standalone Swift toolchain / Command Line Tools) — provides
+  `swift`
+
 ## Run (macOS)
 
 ```
-npm install
-npm start
+swift run
 ```
 
-The window opens at phone-screen proportions so it can sit alongside other
-apps on your desktop. Notes are saved automatically on your machine (no
-account, no sync, no network calls).
+This builds and launches the app directly. The window opens at phone-screen
+proportions so it can sit alongside other apps on your desktop. Notes are
+saved automatically to `~/Library/Application Support/QuickMinimalNotetaker/notes.json`
+(no account, no sync, no network calls).
 
 ## Use
 
@@ -27,7 +37,12 @@ account, no sync, no network calls).
 
 ## Build a standalone app
 
-This project doesn't include a packager. To build a distributable `.app`,
-add a tool like [electron-builder](https://www.electron.build/) or
-[electron-packager](https://github.com/electron/packager) as a dev
-dependency and configure it as needed.
+```
+swift build -c release
+```
+
+The compiled binary is at `.build/release/QuickMinimalNotetaker`. To get a
+proper double-clickable `.app` bundle (with an icon, Info.plist, etc.), open
+the folder in Xcode (`File > Open...`) or wrap the binary in a minimal
+`.app` bundle structure yourself — Swift Package Manager alone only produces
+the raw executable.
