@@ -95,7 +95,7 @@ struct EntryRow: View {
                 Image(nsImage: nsImage)
                     .resizable()
                     .frame(width: size.width, height: nsImage.size.height * scale)
-                    .offset(y: 30)
+                    .offset(y: -30)
                     .opacity(0.23)
             }
         }
