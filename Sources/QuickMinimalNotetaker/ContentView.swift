@@ -90,7 +90,7 @@ struct ContentView: View {
                 backgroundImage
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .opacity(0.1)
+                    .opacity(0.2)
                     .clipped()
             }
         }
