@@ -68,7 +68,7 @@ struct EntryRow: View {
     private var dragHandle: some View {
         GeometryReader { geo in
             if allowReorder {
-                entryBackground
+                entryBackground(size: geo.size)
                     .contentShape(Rectangle())
                     .gesture(
                         DragGesture(minimumDistance: 4, coordinateSpace: .named("entryList"))
@@ -77,36 +77,35 @@ struct EntryRow: View {
                     )
                     .preference(key: RowFramePreferenceKey.self, value: [entryID: geo.frame(in: .named("entryList"))])
             } else {
-                entryBackground
+                entryBackground(size: geo.size)
                     .preference(key: RowFramePreferenceKey.self, value: [entryID: geo.frame(in: .named("entryList"))])
             }
         }
     }
 
-    private var entryBackground: some View {
-        ZStack {
+    /// Scales the image to exactly the card's width — the same scale for every card,
+    /// regardless of that card's own height — then anchors it to the top and clips off
+    /// whatever doesn't fit. Rows just show more or less of the same top slice at the
+    /// same zoom, instead of each stretching/zooming the picture to its own aspect ratio.
+    private func entryBackground(size: CGSize) -> some View {
+        ZStack(alignment: .top) {
             Color.appYellow
-            if let entryImage {
-                // .fit (not .fill): every card shows the whole picture, independently,
-                // clipped to just its own bounds — rows of differing height would
-                // otherwise each crop a different zoomed sliver, reading as one image
-                // flowing continuously behind the whole list instead of a background
-                // that belongs to each card on its own.
-                entryImage
+            if let nsImage = Self.entryNSImage, nsImage.size.width > 0 {
+                let scale = size.width / nsImage.size.width
+                Image(nsImage: nsImage)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .frame(width: size.width, height: nsImage.size.height * scale)
                     .opacity(0.15)
-                    .clipped()
             }
         }
+        .frame(width: size.width, height: size.height, alignment: .top)
+        .clipped()
     }
 
-    private var entryImage: Image? {
-        guard let url = Bundle.module.url(forResource: "entry_background", withExtension: "png"),
-              let nsImage = NSImage(contentsOf: url)
-        else { return nil }
-        return Image(nsImage: nsImage)
-    }
+    private static let entryNSImage: NSImage? = {
+        guard let url = Bundle.module.url(forResource: "entry_background", withExtension: "png") else { return nil }
+        return NSImage(contentsOf: url)
+    }()
 
     private func advanceFromText() {
         guard let index = store.entries.firstIndex(where: { $0.id == entryID }) else { return }
