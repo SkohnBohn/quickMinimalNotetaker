@@ -87,9 +87,14 @@ struct EntryRow: View {
         ZStack {
             Color.appYellow
             if let entryImage {
+                // .fit (not .fill): every card shows the whole picture, independently,
+                // clipped to just its own bounds — rows of differing height would
+                // otherwise each crop a different zoomed sliver, reading as one image
+                // flowing continuously behind the whole list instead of a background
+                // that belongs to each card on its own.
                 entryImage
                     .resizable()
-                    .aspectRatio(contentMode: .fill)
+                    .aspectRatio(contentMode: .fit)
                     .opacity(0.15)
                     .clipped()
             }
