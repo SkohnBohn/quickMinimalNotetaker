@@ -21,9 +21,11 @@ final class GrowingTextView: NSTextView {
 
 /// Plain multi-line text editor with lightweight bullet formatting: pressing Enter on a
 /// line starting with "- " continues the bullet on the next line; pressing Enter on an
-/// empty bullet line removes it instead of repeating it.
+/// empty bullet line removes it instead of repeating it. Pressing Enter on a non-bullet
+/// line, or Tab/Shift-Tab anywhere, hands focus onward instead of inserting text.
 struct BulletTextView: NSViewRepresentable {
     @Binding var text: String
+    var onReturnAdvance: () -> Void = {}
 
     func makeNSView(context: Context) -> GrowingTextView {
         let textView = GrowingTextView()
@@ -45,6 +47,7 @@ struct BulletTextView: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: GrowingTextView, context: Context) {
+        context.coordinator.parent = self
         if nsView.string != text {
             nsView.string = text
             nsView.invalidateIntrinsicContentSize()
@@ -68,6 +71,14 @@ struct BulletTextView: NSViewRepresentable {
         }
 
         func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            if commandSelector == #selector(NSResponder.insertTab(_:)) {
+                textView.window?.selectNextKeyView(nil)
+                return true
+            }
+            if commandSelector == #selector(NSResponder.insertBacktab(_:)) {
+                textView.window?.selectPreviousKeyView(nil)
+                return true
+            }
             guard commandSelector == #selector(NSResponder.insertNewline(_:)) else { return false }
 
             let value = textView.string as NSString
@@ -76,7 +87,9 @@ struct BulletTextView: NSViewRepresentable {
             let currentLine = value.substring(with: NSRange(location: lineRange.location, length: cursor - lineRange.location))
 
             guard currentLine.range(of: #"^\s*-\s?"#, options: .regularExpression) != nil else {
-                return false
+                // Not on a bullet line: Enter finishes this field and moves on, like Tab.
+                parent.onReturnAdvance()
+                return true
             }
 
             let indent = String(currentLine.prefix { $0 == " " || $0 == "\t" })

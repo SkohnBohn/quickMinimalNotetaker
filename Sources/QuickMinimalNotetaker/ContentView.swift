@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var store = NotesStore()
+    @FocusState private var focusedField: FocusField?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -14,7 +15,8 @@ struct ContentView: View {
                 Spacer()
 
                 Button {
-                    store.addEntry()
+                    let newID = store.addEntry()
+                    focusedField = .page(newID)
                 } label: {
                     Text("+")
                         .font(.system(size: 16))
@@ -29,7 +31,7 @@ struct ContentView: View {
             ScrollView {
                 VStack(spacing: 0) {
                     ForEach(store.entries) { entry in
-                        EntryRow(store: store, entryID: entry.id)
+                        EntryRow(store: store, entryID: entry.id, focusedField: $focusedField)
                     }
                 }
                 .padding(.horizontal, 16)

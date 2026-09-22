@@ -24,9 +24,12 @@ final class NotesStore: ObservableObject {
         try? data.write(to: fileURL, options: .atomic)
     }
 
-    func addEntry() {
-        entries.append(Entry())
+    @discardableResult
+    func addEntry() -> UUID {
+        let entry = Entry()
+        entries.append(entry)
         save()
+        return entry.id
     }
 
     func remove(id: UUID) {

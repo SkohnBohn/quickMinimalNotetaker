@@ -3,6 +3,7 @@ import SwiftUI
 struct EntryRow: View {
     @ObservedObject var store: NotesStore
     let entryID: UUID
+    var focusedField: FocusState<FocusField?>.Binding
 
     var body: some View {
         if let index = store.entries.firstIndex(where: { $0.id == entryID }) {
@@ -14,6 +15,10 @@ struct EntryRow: View {
                         .multilineTextAlignment(.center)
                         .frame(width: 40, height: 28)
                         .overlay(Rectangle().frame(width: 1).foregroundColor(.ink), alignment: .trailing)
+                        .focused(focusedField, equals: .page(entryID))
+                        .onSubmit {
+                            focusedField.wrappedValue = .text(entryID)
+                        }
 
                     Spacer(minLength: 0)
 
@@ -27,11 +32,13 @@ struct EntryRow: View {
                     .buttonStyle(.plain)
                     .foregroundColor(.ink.opacity(0.45))
                     .overlay(Rectangle().frame(width: 1).foregroundColor(.ink), alignment: .leading)
+                    .focused(focusedField, equals: .delete(entryID))
                 }
                 .frame(height: 28)
                 .overlay(Rectangle().frame(height: 1).foregroundColor(.ink), alignment: .bottom)
 
-                BulletTextView(text: textBinding(index))
+                BulletTextView(text: textBinding(index), onReturnAdvance: advanceFromText)
+                    .focused(focusedField, equals: .text(entryID))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
                     .frame(minHeight: 34)
@@ -52,6 +59,16 @@ struct EntryRow: View {
                 }
                 return true
             }
+        }
+    }
+
+    private func advanceFromText() {
+        guard let index = store.entries.firstIndex(where: { $0.id == entryID }) else { return }
+        if index + 1 < store.entries.count {
+            focusedField.wrappedValue = .page(store.entries[index + 1].id)
+        } else {
+            let newID = store.addEntry()
+            focusedField.wrappedValue = .page(newID)
         }
     }
 
