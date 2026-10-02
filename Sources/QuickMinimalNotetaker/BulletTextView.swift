@@ -80,6 +80,13 @@ struct BulletTextView: NSViewRepresentable {
                 textView.window?.selectPreviousKeyView(nil)
                 return true
             }
+            // Shift+Return (AppKit sends a different selector than plain Return) always
+            // inserts a literal line break, bypassing bullet continuation and unfocusing.
+            if commandSelector == #selector(NSResponder.insertNewlineIgnoringFieldEditor(_:)) {
+                textView.insertText("\n", replacementRange: textView.selectedRange())
+                parent.text = textView.string
+                return true
+            }
             guard commandSelector == #selector(NSResponder.insertNewline(_:)) else { return false }
 
             let value = textView.string as NSString

@@ -23,88 +23,90 @@ struct ContentView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 10) {
-                Text("NOTES")
-                    .font(.system(size: 12, weight: .semibold))
-                    .tracking(1.5)
-                    .foregroundColor(.ink)
+        ScrollViewReader { proxy in
+            VStack(spacing: 0) {
+                HStack(spacing: 10) {
+                    Text("NOTES")
+                        .font(.system(size: 12, weight: .semibold))
+                        .tracking(1.5)
+                        .foregroundColor(.ink)
 
-                Spacer()
+                    Spacer()
 
-                Button {
-                    sortByPage.toggle()
-                } label: {
-                    Rectangle()
-                        .fill(sortByPage ? Color.ink : Color.clear)
-                        .frame(width: 14, height: 14)
-                        .overlay(Rectangle().stroke(Color.ink, lineWidth: 1))
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-
-                Menu {
-                    Button("Save Notes…", action: saveNotesToFile)
-                    Button("Load Notes…", action: loadNotesFromFile)
-                } label: {
-                    Text("⇅")
-                        .font(.system(size: 13))
-                        .frame(width: 26, height: 26)
-                }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .fixedSize()
-                .foregroundColor(.ink)
-                .overlay(Rectangle().stroke(Color.ink, lineWidth: 1))
-
-                Button {
-                    let newID = store.addEntry()
-                    focusedField = .page(newID)
-                } label: {
-                    Text("+")
-                        .font(.system(size: 16))
-                        .frame(width: 26, height: 26)
-                }
-                .buttonStyle(.plain)
-                .foregroundColor(.ink)
-                .overlay(Rectangle().stroke(Color.ink, lineWidth: 1))
-            }
-            .padding(EdgeInsets(top: 32, leading: 16, bottom: 10, trailing: 16))
-
-            ScrollView {
-                VStack(spacing: 0) {
-                    ForEach(displayedEntries) { entry in
-                        EntryRow(
-                            store: store,
-                            entryID: entry.id,
-                            focusedField: $focusedField,
-                            allowReorder: !sortByPage,
-                            isDragging: draggingID == entry.id,
-                            dragOffsetY: dragOffsetY,
-                            onDragChanged: { value in handleDragChanged(id: entry.id, value: value) },
-                            onDragEnded: { value in handleDragEnded(id: entry.id, value: value) }
-                        )
+                    Button {
+                        sortByPage.toggle()
+                    } label: {
+                        Rectangle()
+                            .fill(sortByPage ? Color.ink : Color.clear)
+                            .frame(width: 14, height: 14)
+                            .overlay(Rectangle().stroke(Color.ink, lineWidth: 1))
+                            .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
+
+                    Menu {
+                        Button("Save Notes…", action: saveNotesToFile)
+                        Button("Load Notes…", action: loadNotesFromFile)
+                    } label: {
+                        Text("⇅")
+                            .font(.system(size: 13))
+                            .frame(width: 26, height: 26)
+                    }
+                    .menuStyle(.borderlessButton)
+                    .menuIndicator(.hidden)
+                    .fixedSize()
+                    .foregroundColor(.ink)
+                    .overlay(Rectangle().stroke(Color.ink, lineWidth: 1))
+
+                    Button {
+                        createEntryAndReveal(using: proxy)
+                    } label: {
+                        Text("+")
+                            .font(.system(size: 16))
+                            .frame(width: 26, height: 26)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.ink)
+                    .overlay(Rectangle().stroke(Color.ink, lineWidth: 1))
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 24)
-                .coordinateSpace(name: "entryList")
-                .onPreferenceChange(RowFramePreferenceKey.self) { rowFrames = $0 }
+                .padding(EdgeInsets(top: 32, leading: 16, bottom: 10, trailing: 16))
+
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(displayedEntries) { entry in
+                            EntryRow(
+                                store: store,
+                                entryID: entry.id,
+                                focusedField: $focusedField,
+                                allowReorder: !sortByPage,
+                                isDragging: draggingID == entry.id,
+                                dragOffsetY: dragOffsetY,
+                                onDragChanged: { value in handleDragChanged(id: entry.id, value: value) },
+                                onDragEnded: { value in handleDragEnded(id: entry.id, value: value) }
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 24)
+                    .coordinateSpace(name: "entryList")
+                    .onPreferenceChange(RowFramePreferenceKey.self) { rowFrames = $0 }
+                }
             }
-        }
-        .background(backgroundLayer)
-        .frame(minWidth: 300, minHeight: 400)
-        .focusable()
-        .focused($focusedField, equals: .root)
-        .onKeyPress(.return) {
-            guard focusedField == .root else { return .ignored }
-            let newID = store.addEntry()
-            focusedField = .page(newID)
-            return .handled
-        }
-        .onAppear {
-            if focusedField == nil {
-                focusedField = .root
+            .background(backgroundLayer)
+            .frame(minWidth: 300, minHeight: 400)
+            .focusable()
+            .focused($focusedField, equals: .root)
+            .onKeyPress(.return) {
+                guard focusedField == .root else { return .ignored }
+                createEntryAndReveal(using: proxy)
+                return .handled
+            }
+            .onKeyPress(.upArrow) { moveSelection(by: -1, using: proxy) }
+            .onKeyPress(.downArrow) { moveSelection(by: 1, using: proxy) }
+            .onAppear {
+                if focusedField == nil {
+                    focusedField = .root
+                }
             }
         }
     }
@@ -153,6 +155,44 @@ struct ContentView: View {
         else { return }
         store.entries = decoded
         store.save()
+    }
+
+    private func createEntryAndReveal(using proxy: ScrollViewProxy) {
+        let newID = store.addEntry()
+        focusedField = .page(newID)
+        // The new row doesn't exist in the scroll view's layout until after this
+        // update commits, so scrollTo needs to run on the next run loop turn.
+        DispatchQueue.main.async {
+            withAnimation {
+                proxy.scrollTo(newID, anchor: .bottom)
+            }
+        }
+    }
+
+    /// Moves selection to the previous/next entry (in display order) and scrolls it
+    /// into view. Only reachable when a page field, the delete button, or root holds
+    /// focus — the text view itself consumes arrow keys for normal cursor movement.
+    private func moveSelection(by delta: Int, using proxy: ScrollViewProxy) -> KeyPress.Result {
+        let entries = displayedEntries
+        guard !entries.isEmpty else { return .ignored }
+
+        let currentIndex: Int?
+        switch focusedField {
+        case .page(let id), .delete(let id):
+            currentIndex = entries.firstIndex(where: { $0.id == id })
+        default:
+            currentIndex = nil
+        }
+
+        let nextIndex = currentIndex.map { $0 + delta } ?? (delta > 0 ? 0 : entries.count - 1)
+        guard entries.indices.contains(nextIndex) else { return .ignored }
+
+        let targetID = entries[nextIndex].id
+        focusedField = .page(targetID)
+        withAnimation {
+            proxy.scrollTo(targetID)
+        }
+        return .handled
     }
 
     private func handleDragChanged(id: UUID, value: DragGesture.Value) {
