@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
 
 struct ContentView: View {
     @StateObject private var store = NotesStore()
@@ -42,6 +43,20 @@ struct ContentView: View {
                 }
                 .buttonStyle(.plain)
 
+                Menu {
+                    Button("Save Notes…", action: saveNotesToFile)
+                    Button("Load Notes…", action: loadNotesFromFile)
+                } label: {
+                    Text("⇅")
+                        .font(.system(size: 13))
+                        .frame(width: 26, height: 26)
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .foregroundColor(.ink)
+                .overlay(Rectangle().stroke(Color.ink, lineWidth: 1))
+
                 Button {
                     let newID = store.addEntry()
                     focusedField = .page(newID)
@@ -79,6 +94,19 @@ struct ContentView: View {
         }
         .background(backgroundLayer)
         .frame(minWidth: 300, minHeight: 400)
+        .focusable()
+        .focused($focusedField, equals: .root)
+        .onKeyPress(.return) {
+            guard focusedField == .root else { return .ignored }
+            let newID = store.addEntry()
+            focusedField = .page(newID)
+            return .handled
+        }
+        .onAppear {
+            if focusedField == nil {
+                focusedField = .root
+            }
+        }
     }
 
     /// Solid yellow with the reference painting bled in at low opacity on top, so the
@@ -101,6 +129,30 @@ struct ContentView: View {
               let nsImage = NSImage(contentsOf: url)
         else { return nil }
         return Image(nsImage: nsImage)
+    }
+
+    /// Plain JSON of the entries array — the same shape NotesStore already persists,
+    /// so a saved file can just be dropped back in to restore exactly.
+    private func saveNotesToFile() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.nameFieldStringValue = "notes.json"
+        guard panel.runModal() == .OK, let url = panel.url,
+              let data = try? JSONEncoder().encode(store.entries)
+        else { return }
+        try? data.write(to: url)
+    }
+
+    private func loadNotesFromFile() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.json]
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url,
+              let data = try? Data(contentsOf: url),
+              let decoded = try? JSONDecoder().decode([Entry].self, from: data)
+        else { return }
+        store.entries = decoded
+        store.save()
     }
 
     private func handleDragChanged(id: UUID, value: DragGesture.Value) {

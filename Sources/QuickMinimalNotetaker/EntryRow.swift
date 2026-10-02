@@ -44,7 +44,7 @@ struct EntryRow: View {
                 .frame(height: 28)
                 .overlay(Rectangle().frame(height: 1).foregroundColor(.ink), alignment: .bottom)
 
-                BulletTextView(text: textBinding, onReturnAdvance: advanceFromText)
+                BulletTextView(text: textBinding, onReturnUnfocus: { focusedField.wrappedValue = .root })
                     .focused(focusedField, equals: .text(entryID))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
@@ -107,16 +107,6 @@ struct EntryRow: View {
         guard let url = Bundle.module.url(forResource: "entry_background", withExtension: "png") else { return nil }
         return NSImage(contentsOf: url)
     }()
-
-    private func advanceFromText() {
-        guard let index = store.entries.firstIndex(where: { $0.id == entryID }) else { return }
-        if index + 1 < store.entries.count {
-            focusedField.wrappedValue = .page(store.entries[index + 1].id)
-        } else {
-            let newID = store.addEntry()
-            focusedField.wrappedValue = .page(newID)
-        }
-    }
 
     // Looked up by id on every access (not a captured array index) so a binding held by
     // an outgoing view during removal can't read or write past the end of the array.

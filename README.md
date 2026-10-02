@@ -10,7 +10,7 @@ locally with your own Xcode/Swift toolchain.
 
 ## Requirements
 
-- macOS 13 or later
+- macOS 14 or later
 - Xcode (or the standalone Swift toolchain / Command Line Tools) — provides
   `swift`
 
@@ -31,7 +31,15 @@ saved automatically to `~/Library/Application Support/QuickMinimalNotetaker/note
 - Each entry has a small page-number box and a text field below it.
 - In the text field, start a line with `- ` to get bullet formatting —
   pressing Enter continues the bullet on the next line; pressing Enter on an
-  empty bullet ends the list.
+  empty bullet ends the list. Pressing Enter on a non-bullet line finishes
+  (unselects) that entry rather than adding a new one — press Enter again
+  with nothing selected to add a new entry.
+- Tab cycles through page number → delete → text → next entry. Cmd+V and
+  Cmd+Shift+V (paste and match style) work in the text field as usual.
+- The small square checkbox sorts entries by ascending page number for
+  display only; unchecking restores your drag-arranged order exactly.
+- **⇅** opens Save Notes… / Load Notes… to export or import your notes as a
+  JSON file.
 - Drag an entry by its body to reorder it in the list.
 - The **×** on an entry removes it.
 

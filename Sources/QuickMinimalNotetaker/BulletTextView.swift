@@ -22,10 +22,11 @@ final class GrowingTextView: NSTextView {
 /// Plain multi-line text editor with lightweight bullet formatting: pressing Enter on a
 /// line starting with "- " continues the bullet on the next line; pressing Enter on an
 /// empty bullet line removes it instead of repeating it. Pressing Enter on a non-bullet
-/// line, or Tab/Shift-Tab anywhere, hands focus onward instead of inserting text.
+/// line ends editing (hands focus to the catch-all root) instead of inserting a newline;
+/// Tab/Shift-Tab anywhere hand focus to the next/previous control.
 struct BulletTextView: NSViewRepresentable {
     @Binding var text: String
-    var onReturnAdvance: () -> Void = {}
+    var onReturnUnfocus: () -> Void = {}
 
     func makeNSView(context: Context) -> GrowingTextView {
         let textView = GrowingTextView()
@@ -87,8 +88,8 @@ struct BulletTextView: NSViewRepresentable {
             let currentLine = value.substring(with: NSRange(location: lineRange.location, length: cursor - lineRange.location))
 
             guard currentLine.range(of: #"^\s*-\s?"#, options: .regularExpression) != nil else {
-                // Not on a bullet line: Enter finishes this field and moves on, like Tab.
-                parent.onReturnAdvance()
+                // Not on a bullet line: Enter finishes this field and unselects it.
+                parent.onReturnUnfocus()
                 return true
             }
 
