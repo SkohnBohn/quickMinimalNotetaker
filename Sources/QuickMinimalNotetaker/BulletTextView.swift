@@ -17,6 +17,20 @@ final class GrowingTextView: NSTextView {
         super.didChangeText()
         invalidateIntrinsicContentSize()
     }
+
+    // AppKit's Shift+Return → insertNewlineIgnoringFieldEditor: binding only kicks in
+    // when a text view is acting as a field editor for some other control. This view
+    // is a standalone NSTextView, so Shift+Return would otherwise resolve to the exact
+    // same insertNewline: as plain Return, and the delegate could never tell them apart.
+    // Checking the modifier here, before interpretKeyEvents/doCommandBy ever see it, is
+    // the only reliable way to catch it.
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 36, event.modifierFlags.contains(.shift) {
+            insertText("\n", replacementRange: selectedRange())
+            return
+        }
+        super.keyDown(with: event)
+    }
 }
 
 /// Plain multi-line text editor with lightweight bullet formatting: pressing Enter on a
@@ -81,8 +95,9 @@ struct BulletTextView: NSViewRepresentable {
                 textView.window?.selectPreviousKeyView(nil)
                 return true
             }
-            // Shift+Return (AppKit sends a different selector than plain Return) always
-            // inserts a literal line break, bypassing bullet continuation and unfocusing.
+            // Defensive fallback: GrowingTextView.keyDown is what actually catches
+            // Shift+Return (see its comment for why), but this selector is kept here
+            // too in case some other input path ever produces it.
             if commandSelector == #selector(NSResponder.insertNewlineIgnoringFieldEditor(_:)) {
                 textView.insertText("\n", replacementRange: textView.selectedRange())
                 parent.text = textView.string
