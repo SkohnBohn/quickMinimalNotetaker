@@ -82,7 +82,8 @@ struct ContentView: View {
                                 isDragging: draggingID == entry.id,
                                 dragOffsetY: dragOffsetY,
                                 onDragChanged: { value in handleDragChanged(id: entry.id, value: value) },
-                                onDragEnded: { value in handleDragEnded(id: entry.id, value: value) }
+                                onDragEnded: { value in handleDragEnded(id: entry.id, value: value) },
+                                onReturnAdvance: { advanceFromText(entryID: entry.id, using: proxy) }
                             )
                         }
                     }
@@ -169,26 +170,43 @@ struct ContentView: View {
         }
     }
 
-    /// Moves selection to the previous/next entry (in display order) and scrolls it
-    /// into view. Only reachable when a page field, the delete button, or root holds
-    /// focus — the text view itself consumes arrow keys for normal cursor movement.
-    private func moveSelection(by delta: Int, using proxy: ScrollViewProxy) -> KeyPress.Result {
+    /// Enter on a non-bullet line: move on to the next entry's page field, or add a new
+    /// entry (and reveal it) if this was the last one.
+    private func advanceFromText(entryID: UUID, using proxy: ScrollViewProxy) {
         let entries = displayedEntries
-        guard !entries.isEmpty else { return .ignored }
+        guard let index = entries.firstIndex(where: { $0.id == entryID }) else { return }
+        if index + 1 < entries.count {
+            let nextID = entries[index + 1].id
+            focusedField = .page(nextID)
+            withAnimation { proxy.scrollTo(nextID) }
+        } else {
+            createEntryAndReveal(using: proxy)
+        }
+    }
 
-        let currentIndex: Int?
-        switch focusedField {
-        case .page(let id), .delete(let id):
-            currentIndex = entries.firstIndex(where: { $0.id == id })
+    /// Moves selection to the previous/next stop — each entry contributes a page-field
+    /// stop and a text-field stop, in that order — and scrolls it into view. Only
+    /// reachable when a page field, the delete button, or root holds focus: once arrow
+    /// navigation lands on the text view, further arrow presses move the text cursor
+    /// as normal rather than continuing to the next entry.
+    private func moveSelection(by delta: Int, using proxy: ScrollViewProxy) -> KeyPress.Result {
+        let stops: [FocusField] = displayedEntries.flatMap { [.page($0.id), .text($0.id)] }
+        guard !stops.isEmpty else { return .ignored }
+
+        let currentIndex = focusedField.flatMap { stops.firstIndex(of: $0) }
+        let nextIndex = currentIndex.map { $0 + delta } ?? (delta > 0 ? 0 : stops.count - 1)
+        guard stops.indices.contains(nextIndex) else { return .ignored }
+
+        let target = stops[nextIndex]
+        let targetID: UUID
+        switch target {
+        case .page(let id), .text(let id):
+            targetID = id
         default:
-            currentIndex = nil
+            return .ignored
         }
 
-        let nextIndex = currentIndex.map { $0 + delta } ?? (delta > 0 ? 0 : entries.count - 1)
-        guard entries.indices.contains(nextIndex) else { return .ignored }
-
-        let targetID = entries[nextIndex].id
-        focusedField = .page(targetID)
+        focusedField = target
         withAnimation {
             proxy.scrollTo(targetID)
         }

@@ -10,6 +10,7 @@ struct EntryRow: View {
     var dragOffsetY: CGFloat = 0
     var onDragChanged: (DragGesture.Value) -> Void = { _ in }
     var onDragEnded: (DragGesture.Value) -> Void = { _ in }
+    var onReturnAdvance: () -> Void = {}
 
     var body: some View {
         if store.entries.contains(where: { $0.id == entryID }) {
@@ -44,7 +45,7 @@ struct EntryRow: View {
                 .frame(height: 28)
                 .overlay(Rectangle().frame(height: 1).foregroundColor(.ink), alignment: .bottom)
 
-                BulletTextView(text: textBinding, onReturnUnfocus: { focusedField.wrappedValue = .root })
+                BulletTextView(text: textBinding, onReturnAdvance: onReturnAdvance)
                     .focused(focusedField, equals: .text(entryID))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
