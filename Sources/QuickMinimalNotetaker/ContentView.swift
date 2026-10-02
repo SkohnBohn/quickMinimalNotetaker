@@ -134,12 +134,19 @@ struct ContentView: View {
         return Image(nsImage: nsImage)
     }
 
+    /// The current user's Downloads folder — resolved per-user via FileManager, not a
+    /// hardcoded path — used as the save/load panels' starting directory.
+    private var defaultBackupDirectory: URL? {
+        FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
+    }
+
     /// Plain JSON of the entries array — the same shape NotesStore already persists,
     /// so a saved file can just be dropped back in to restore exactly.
     private func saveNotesToFile() {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.json]
         panel.nameFieldStringValue = "notes.json"
+        panel.directoryURL = defaultBackupDirectory
         guard panel.runModal() == .OK, let url = panel.url,
               let data = try? JSONEncoder().encode(store.entries)
         else { return }
@@ -150,6 +157,7 @@ struct ContentView: View {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.json]
         panel.allowsMultipleSelection = false
+        panel.directoryURL = defaultBackupDirectory
         guard panel.runModal() == .OK, let url = panel.url,
               let data = try? Data(contentsOf: url),
               let decoded = try? JSONDecoder().decode([Entry].self, from: data)
